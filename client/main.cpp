@@ -70,6 +70,10 @@ void setup() {
   
 	/*Prepare the data to send*/
 	strcpy(myData.msg, "Hello from ESP32 Sender!");
+
+	/*Send message*/
+	esp_now_send(receiverMACAddress, (uint8_t *)&myData, sizeof(myData));
+  Serial.println("Message Sent.");
 }
 
 void loop() {
