@@ -14,11 +14,10 @@ typedef struct struct_message {
 
 struct_message myData; // Create a global instance of the structure to hold the message
 
-void onDataReceived(const uint8_t *mac, const uint8_t *incomingData, int len) {
+void onDataReceived(const esp_now_recv_info* info, const uint8_t *incomingData, int len) {
 	struct_message incomingMessage;
 	memcpy(&incomingMessage, incomingData, sizeof(incomingMessage));
 
-	/*Print the received message*/
 	Serial.print("Received message: ");
 	Serial.println(incomingMessage.msg);
 }
@@ -35,8 +34,8 @@ const char keys[ROW_NUM][COL_NUM] = {
 };  
 
 /*Matching GPIO pins*/
-const byte pin_rows[ROW_NUM] = {34, 35, 32, 33};
-const byte pin_cols[COL_NUM] = {25, 26, 27};
+byte pin_rows[ROW_NUM] = {34, 35, 32, 33};
+byte pin_cols[COL_NUM] = {25, 26, 27};
 
 /*Create keypad object
 Example: char key = keypad.getKey();*/
