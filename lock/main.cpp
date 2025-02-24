@@ -22,13 +22,13 @@ void onDataReceived(const uint8_t *mac, const uint8_t *incomingData, int len) {
 	Serial.println(incomingMessage.msg);
 }
 
-const int[PASSWORDS_AMOUNT][PASSWORD_LEN] = {
+const int passwords[PASSWORDS_AMOUNT][PASSWORD_LEN] = {
 	{1, 2, 3, 4},
 	{2, 0, 0, 7},
 	{3, 3, 3, 3}
 };
 
-int[PASSWORD_LEN] password_buffer {0};
+int password_buffer[PASSWORD_LEN] = {0};
 
 /*Knowing array is passed by reference*/
 void clear_buffer(int (&buff)[PASSWORD_LEN]) {
@@ -38,10 +38,8 @@ void clear_buffer(int (&buff)[PASSWORD_LEN]) {
 	return;
 }
 
-clear_buffer(password_buffer);
-
 void setup() {
-
+	clear_buffer(password_buffer);
 }
 
 void loop() {
