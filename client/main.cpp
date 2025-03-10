@@ -4,6 +4,19 @@
 #include <WiFi.h>
 #include <esp_now.h>
 
+/*Includes for MFRC522*/
+#include <SPI.h>
+#include <MFRC522.h>
+
+/*MFRC522 Pin Conf*/
+#define SDA_PIN 5    // SDA connected to D5 (GPIO 5)
+#define RST_PIN 22   // RST connected to D22 (GPIO 22)
+#define SCK_PIN 18   // SCK connected to D18 (GPIO 18)
+#define MOSI_PIN 19  // MOSI connected to D19 (GPIO 19)
+#define MISO_PIN 23  // MISO connected to D23 (GPIO 23)
+
+
+MFRC522 mfrc522(SDA_PIN, RST_PIN);  // Create MFRC522 instance
 
 const uint8_t receiverMACAddress[] = {0x24, 0x6F, 0x28, 0xE2, 0x8B, 0x1A};  // Example MAC address
 
@@ -44,6 +57,10 @@ Keypad keypad = Keypad(makeKeymap(keys), pin_rows, pin_cols, ROW_NUM, COL_NUM);
 void setup() {
 	Serial.begin(115200);
 
+	SPI.begin(SCK_PIN, MISO_PIN, MOSI_PIN, SDA_PIN);  // Initialize SPI bus
+  
+  mfrc522.PCD_Init();  // Initialize the MFRC522 RFID reader
+
 	/*Initialize WiFi in Station mode (necessary for ESP-NOW)*/
 	WiFi.mode(WIFI_STA);
 	Serial.println("ESP32 Sender (Transmitter) Initialized.");
@@ -61,7 +78,7 @@ void setup() {
 	esp_now_peer_info_t peerInfo;
 	memcpy(peerInfo.peer_addr, receiverMACAddress, 6);
 	peerInfo.channel = 0;  // Use the default channel
-	peerInfo.encrypt = false; // No encryption
+	peerInfo.encrypt = true; // No encryption
 	if (esp_now_add_peer(&peerInfo) != ESP_OK) {
 		Serial.println("Failed to add peer.");
 		return;
@@ -76,6 +93,29 @@ void setup() {
 }
 
 void loop() {
+  /* Look for new cards */
+  if ( !mfrc522.PICC_IsNewCardPresent()) {
+    return;
+  }
+
+  // Select one of the cards
+  if ( !mfrc522.PICC_ReadCardSerial()) {
+    return;
+  }
+
+  // Print UID of the card
+  Serial.print("UID tag :");
+  String content = "";
+  for (byte i = 0; i < mfrc522.uid.size; i++) {
+    content.concat(String(mfrc522.uid.uidByte[i] < 0x10 ? " 0" : ""));
+    content.concat(String(mfrc522.uid.uidByte[i], HEX));
+  }
+  Serial.println(content);
+  
+  mfrc522.PICC_HaltA();  // Halt the PICC (Card)
+  mfrc522.PCD_StopCrypto1();  // Stop encryption on the reader
+
+
 	/*Send the message to the receiver ESP32*/
 	esp_err_t result = esp_now_send(receiverMACAddress, (uint8_t *)&myData, sizeof(myData));
 
