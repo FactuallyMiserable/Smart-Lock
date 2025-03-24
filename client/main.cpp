@@ -8,13 +8,38 @@
 #include <SPI.h>
 #include <MFRC522.h>
 
+/*Includes for LCD*/
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+/*LCD Address and Pin Conf*/
+#define I2C_ADDR  0x27 // I2C address is 0x27 for the 16x2 display
+#define LCD_SDA 2
+#define LCD_SCL 4
+
+#define LCD_COLUMNS 16
+#define LCD_ROWS 2
+
+LiquidCrystal_I2C lcd(I2C_ADDR, LCD_COLUMNS, LCD_ROWS);
+
+void PrintToLCD(int row, String text) {
+  if (row > 2 || row < 1) return;
+  // set cursor to first column, chosen row
+  lcd.setCursor(0, row-1);
+  // print message
+  lcd.print("Hello, World!");
+}
+
+void ClearLCD() {
+  lcd.clear();
+}
+
 /*MFRC522 Pin Conf*/
 #define SDA_PIN 5    // SDA connected to D5 (GPIO 5)
 #define RST_PIN 22   // RST connected to D22 (GPIO 22)
 #define SCK_PIN 18   // SCK connected to D18 (GPIO 18)
 #define MOSI_PIN 19  // MOSI connected to D19 (GPIO 19)
 #define MISO_PIN 23  // MISO connected to D23 (GPIO 23)
-
 
 MFRC522 mfrc522(SDA_PIN, RST_PIN);  // Create MFRC522 instance
 
@@ -55,6 +80,14 @@ Example: char key = keypad.getKey();*/
 Keypad keypad = Keypad(makeKeymap(keys), pin_rows, pin_cols, ROW_NUM, COL_NUM);
 
 void setup() {
+  /*Initialize the I2C bus*/
+  Wire.begin(LCD_SDA, LCD_SCL);
+
+  /*Initialize LCD*/
+  lcd.init();
+  /*turn on LCD backlight*/                 
+  lcd.backlight();
+
 	Serial.begin(115200);
 
 	SPI.begin(SCK_PIN, MISO_PIN, MOSI_PIN, SDA_PIN);  // Initialize SPI bus
@@ -93,6 +126,14 @@ void setup() {
 }
 
 void loop() {
+    // Use LCD functions to Print to Rows 1 and 2
+    PrintToLCD(1, "Hello, World!");
+    delay(1000);
+    PrintToLCD(2, "Hello, World!");
+    delay(1000);
+    lcd.setCursor(0, 0);
+    ClearLCD();
+  
   /* Look for new cards */
   if ( !mfrc522.PICC_IsNewCardPresent()) {
     return;
