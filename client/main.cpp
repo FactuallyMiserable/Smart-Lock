@@ -22,12 +22,12 @@
 
 LiquidCrystal_I2C lcd(I2C_ADDR, LCD_COLUMNS, LCD_ROWS);
 
-void PrintToLCD(int row, String text) {
+void PrintToLCD(int row, const String& text) {
   if (row > 2 || row < 1) return;
   // set cursor to first column, chosen row
   lcd.setCursor(0, row-1);
   // print message
-  lcd.print("Hello, World!");
+  lcd.print(text);
 }
 
 void ClearLCD() {
@@ -128,7 +128,6 @@ void setup() {
 void loop() {
     // Use LCD functions to Print to Rows 1 and 2
     PrintToLCD(1, "Hello, World!");
-    delay(1000);
     PrintToLCD(2, "Hello, World!");
     delay(1000);
     lcd.setCursor(0, 0);
