@@ -69,7 +69,10 @@ const char keys[ROW_NUM][COL_NUM] = {
 	{'4', '5', '6'},
 	{'7', '8', '9'},
 	{'*', '0', '#'}
-};  
+};
+
+// char keypresses[4];
+// int keypresses_index = 0;
 
 /*Matching GPIO pins*/
 byte pin_rows[ROW_NUM] = {34, 35, 32, 33};
@@ -127,43 +130,106 @@ void setup() {
 
 void loop() {
     // Use LCD functions to Print to Rows 1 and 2
-    PrintToLCD(1, "Hello, World!");
-    PrintToLCD(2, "Hello, World!");
-    delay(1000);
     lcd.setCursor(0, 0);
     ClearLCD();
+    PrintToLCD(1, "Choose Mode:");
+    PrintToLCD(2, "1. NFC 2. Keypad");
+
+
+    char key = keypad.getKey();
+    delay(50); // Debounce
+
+    if (key == '1') {
+      // RFID Logic
+    } else if (key == '2') {
+      lcd.setCursor(0, 0);
+      ClearLCD();
+      PrintToLCD(1, "Enter Password:");
+      PrintToLCD(2, "_ _ _ _");
+      char stream[] = {'A', 'A', 'A', 'A', 'A'};
+      int idx = 0;
+      while (idx < 5) {
+        char key = keypad.getKey();
+        delay(50); // Debounce
+
+        
+        if (key == '*') {
+          idx = 0;
+          memset(stream, 'A', sizeof(stream));
+
+          lcd.setCursor(0, 1);
+          ClearLCD();
+          PrintToLCD(2, "_ _ _ _");
+
+          continue;
+        }
+        else if (key == '#' & idx == 4) {
+          break;
+        }
+        else if (key) {
+          stream[idx] = key;
+          idx++;
+          String pressed = "";
+          for (int i = 0; i < 4; i++) {
+            if (stream[i] == 'A') {
+              pressed += "_ ";
+            }
+            else {
+              pressed += stream[i];
+              pressed += " ";
+            }
+          }
+          lcd.setCursor(0, 0);
+          ClearLCD();
+          PrintToLCD(1, "Enter Password:");
+          PrintToLCD(2, pressed);
+        }
+
+      }
+
+      stream[4] = '\0';
+
+      /*Prepare the data to send*/
+      strcpy(myData.msg, stream);
+
+      /*Send message*/
+      esp_now_send(receiverMACAddress, (uint8_t *)&myData, sizeof(myData));
+      Serial.println("Message Sent.");
+    }
   
-  /* Look for new cards */
-  if ( !mfrc522.PICC_IsNewCardPresent()) {
-    return;
-  }
+  // /* Look for new cards */
+  // if ( !mfrc522.PICC_IsNewCardPresent()) {
+  //   return;
+  // }
 
-  // Select one of the cards
-  if ( !mfrc522.PICC_ReadCardSerial()) {
-    return;
-  }
+  // // Select one of the cards
+  // if ( !mfrc522.PICC_ReadCardSerial()) {
+  //   return;
+  // }
 
-  // Print UID of the card
-  Serial.print("UID tag :");
-  String content = "";
-  for (byte i = 0; i < mfrc522.uid.size; i++) {
-    content.concat(String(mfrc522.uid.uidByte[i] < 0x10 ? " 0" : ""));
-    content.concat(String(mfrc522.uid.uidByte[i], HEX));
-  }
-  Serial.println(content);
+  // // Print UID of the card
+  // Serial.print("UID tag :");
+  // String content = "";
+  // for (byte i = 0; i < mfrc522.uid.size; i++) {
+  //   content.concat(String(mfrc522.uid.uidByte[i] < 0x10 ? " 0" : ""));
+  //   content.concat(String(mfrc522.uid.uidByte[i], HEX));
+  // }
+  // Serial.println(content);
   
-  mfrc522.PICC_HaltA();  // Halt the PICC (Card)
-  mfrc522.PCD_StopCrypto1();  // Stop encryption on the reader
+  // mfrc522.PICC_HaltA();  // Halt the PICC (Card)
+  // mfrc522.PCD_StopCrypto1();  // Stop encryption on the reader
 
 
-	/*Send the message to the receiver ESP32*/
-	esp_err_t result = esp_now_send(receiverMACAddress, (uint8_t *)&myData, sizeof(myData));
+	// /*Send the message to the receiver ESP32*/
+	// esp_err_t result = esp_now_send(receiverMACAddress, (uint8_t *)&myData, sizeof(myData));
 
-	if (result == ESP_OK) {
-		Serial.println("Message sent successfully.");
-	} else {
-		Serial.println("Error sending message.");
-	}
+	// if (result == ESP_OK) {
+	// 	Serial.println("Message sent successfully.");
+	// } else {
+	// 	Serial.println("Error sending message.");
+	// }
 
-	delay(2000); // Wait for 2 seconds before sending the next message
+	// delay(2000); // Wait for 2 seconds before sending the next message
+  lcd.setCursor(0, 0);
+  ClearLCD();
 }
