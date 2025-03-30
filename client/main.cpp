@@ -141,6 +141,49 @@ void loop() {
 
     if (key == '1') {
       // RFID Logic
+      lcd.setCursor(0, 0);
+      ClearLCD();
+      PrintToLCD(1, "Choose mode:");
+      PrintToLCD(2, "1. READ 2. ADD");
+      while (true) {  
+        char key = keypad.getKey();
+        if (key) {  // If a key is detected, break the loop
+            if (key == '1') {
+              char newKey = keypad.getKey();
+              while (true) {
+                if (newKey) break;
+                if (!mfrc522.PICC_IsNewCardPresent())
+                  continue;
+        
+                // Select one of the cards
+                if (!mfrc522.PICC_ReadCardSerial())
+                  continue;
+
+                if (esp_now_send(receiverMACAddress, mfrc522.uid.uidByte, mfrc522.uid.size) == ESP_OK) {
+                  lcd.setCursor(0, 0);
+                  ClearLCD();
+                  PrintToLCD(1, "Sent!");
+                  /*Wait for approval from server side*/
+                } else {
+                  lcd.setCursor(0, 0);
+                  ClearLCD();
+                  PrintToLCD(1, "Sent!");
+                }
+
+                delay(1000);
+
+                break;
+
+              }
+            } else if (key == '2') {
+              // Write a logic that requires authentication by special passcode
+            }
+
+            break;
+        }
+      }
+
+
     } else if (key == '2') {
       lcd.setCursor(0, 0);
       ClearLCD();
