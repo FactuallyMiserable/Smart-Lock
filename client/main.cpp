@@ -14,8 +14,8 @@
 
 /*LCD Address and Pin Conf*/
 #define I2C_ADDR  0x27 // I2C address is 0x27 for the 16x2 display
-#define LCD_SDA 2
-#define LCD_SCL 4
+#define LCD_SDA 21
+#define LCD_SCL 22
 
 #define LCD_COLUMNS 16
 #define LCD_ROWS 2
@@ -36,10 +36,10 @@ void ClearLCD() {
 
 /*MFRC522 Pin Conf*/
 #define SDA_PIN 5    // SDA connected to D5 (GPIO 5)
-#define RST_PIN 22   // RST connected to D22 (GPIO 22)
+#define RST_PIN 4  // RST connected to D22 (GPIO 22)
 #define SCK_PIN 18   // SCK connected to D18 (GPIO 18)
-#define MOSI_PIN 19  // MOSI connected to D19 (GPIO 19)
-#define MISO_PIN 23  // MISO connected to D23 (GPIO 23)
+#define MOSI_PIN 23  // MOSI connected to D19 (GPIO 19)
+#define MISO_PIN 19  // MISO connected to D23 (GPIO 23)
 
 MFRC522 mfrc522(SDA_PIN, RST_PIN);  // Create MFRC522 instance
 
@@ -75,7 +75,7 @@ const char keys[ROW_NUM][COL_NUM] = {
 // int keypresses_index = 0;
 
 /*Matching GPIO pins*/
-byte pin_rows[ROW_NUM] = {34, 35, 32, 33};
+byte pin_rows[ROW_NUM] = {32, 33, 34, 35};
 byte pin_cols[COL_NUM] = {25, 26, 27};
 
 /*Create keypad object
@@ -134,111 +134,117 @@ void loop() {
     ClearLCD();
     PrintToLCD(1, "Choose Mode:");
     PrintToLCD(2, "1. NFC 2. Keypad");
+    delay(5);
 
 
     char key = keypad.getKey();
     delay(50); // Debounce
 
-    if (key == '1') {
-      // RFID Logic
-      lcd.setCursor(0, 0);
-      ClearLCD();
-      PrintToLCD(1, "Choose mode:");
-      PrintToLCD(2, "1. READ 2. ADD");
-      while (true) {  
-        char key = keypad.getKey();
-        if (key) {  // If a key is detected, break the loop
-            if (key == '1') {
-              char newKey = keypad.getKey();
-              while (true) {
-                if (newKey) break;
-                if (!mfrc522.PICC_IsNewCardPresent())
-                  continue;
-        
-                // Select one of the cards
-                if (!mfrc522.PICC_ReadCardSerial())
-                  continue;
-
-                if (esp_now_send(receiverMACAddress, mfrc522.uid.uidByte, mfrc522.uid.size) == ESP_OK) {
-                  lcd.setCursor(0, 0);
-                  ClearLCD();
-                  PrintToLCD(1, "Sent!");
-                  /*Wait for approval from server side*/
-                } else {
-                  lcd.setCursor(0, 0);
-                  ClearLCD();
-                  PrintToLCD(1, "Sent!");
+    if (key) {
+      if (key == '1') {
+        // RFID Logic
+        lcd.setCursor(0, 0);
+        ClearLCD();
+        PrintToLCD(1, "Choose mode:");
+        PrintToLCD(2, "1. READ 2. ADD");
+        while (true) {  
+          char key = keypad.getKey();
+          if (key) {  // If a key is detected, break the loop
+              if (key == '1') {
+                char newKey = keypad.getKey();
+                while (true) {
+                  if (newKey) break;
+                  if (!mfrc522.PICC_IsNewCardPresent())
+                    continue;
+          
+                  // Select one of the cards
+                  if (!mfrc522.PICC_ReadCardSerial())
+                    continue;
+  
+                  if (esp_now_send(receiverMACAddress, mfrc522.uid.uidByte, mfrc522.uid.size) == ESP_OK) {
+                    lcd.setCursor(0, 0);
+                    ClearLCD();
+                    PrintToLCD(1, "Sent!");
+                    /*Wait for approval from server side*/
+                  } else {
+                    lcd.setCursor(0, 0);
+                    ClearLCD();
+                    PrintToLCD(1, "Sent!");
+                  }
+  
+                  delay(1000);
+  
+                  break;
+  
                 }
-
-                delay(1000);
-
-                break;
-
+              } else if (key == '2') {
+                // Write a logic that requires authentication by special passcode
+              } else if (key == '*') {
+                return; // Exit the loop and go back to the main menu
               }
-            } else if (key == '2') {
-              // Write a logic that requires authentication by special passcode
-            }
-
-            break;
-        }
-      }
-
-
-    } else if (key == '2') {
-      lcd.setCursor(0, 0);
-      ClearLCD();
-      PrintToLCD(1, "Enter Password:");
-      PrintToLCD(2, "_ _ _ _");
-      char stream[] = {'A', 'A', 'A', 'A', 'A'};
-      int idx = 0;
-      while (idx < 5) {
-        char key = keypad.getKey();
-        delay(50); // Debounce
-
-        
-        if (key == '*') {
-          idx = 0;
-          memset(stream, 'A', sizeof(stream));
-
-          lcd.setCursor(0, 1);
-          ClearLCD();
-          PrintToLCD(2, "_ _ _ _");
-
-          continue;
-        }
-        else if (key == '#' & idx == 4) {
-          break;
-        }
-        else if (key) {
-          stream[idx] = key;
-          idx++;
-          String pressed = "";
-          for (int i = 0; i < 4; i++) {
-            if (stream[i] == 'A') {
-              pressed += "_ ";
-            }
-            else {
-              pressed += stream[i];
-              pressed += " ";
-            }
+  
+              break;
           }
-          lcd.setCursor(0, 0);
-          ClearLCD();
-          PrintToLCD(1, "Enter Password:");
-          PrintToLCD(2, pressed);
         }
-
+  
+  
+      } else if (key == '2') {
+        lcd.setCursor(0, 0);
+        ClearLCD();
+        PrintToLCD(1, "Enter Password:");
+        PrintToLCD(2, "_ _ _ _");
+        char stream[] = {'A', 'A', 'A', 'A', 'A'};
+        int idx = 0;
+        while (idx < 5) {
+          char key = keypad.getKey();
+          delay(50); // Debounce
+  
+          
+          if (key == '*') {
+            idx = 0;
+            memset(stream, 'A', sizeof(stream));
+  
+            lcd.setCursor(0, 1);
+            ClearLCD();
+            PrintToLCD(2, "_ _ _ _");
+  
+            continue;
+          }
+          else if (key == '#' & idx == 4) {
+            break;
+          }
+          else if (key) {
+            stream[idx] = key;
+            idx++;
+            String pressed = "";
+            for (int i = 0; i < 4; i++) {
+              if (stream[i] == 'A') {
+                pressed += "_ ";
+              }
+              else {
+                pressed += stream[i];
+                pressed += " ";
+              }
+            }
+            lcd.setCursor(0, 0);
+            ClearLCD();
+            PrintToLCD(1, "Enter Password:");
+            PrintToLCD(2, pressed);
+          }
+  
+        }
+  
+        stream[4] = '\0';
+  
+        /*Prepare the data to send*/
+        strcpy(myData.msg, stream);
+  
+        /*Send message*/
+        esp_now_send(receiverMACAddress, (uint8_t *)&myData, sizeof(myData));
+        Serial.println("Message Sent.");
       }
-
-      stream[4] = '\0';
-
-      /*Prepare the data to send*/
-      strcpy(myData.msg, stream);
-
-      /*Send message*/
-      esp_now_send(receiverMACAddress, (uint8_t *)&myData, sizeof(myData));
-      Serial.println("Message Sent.");
     }
+    
   
   // /* Look for new cards */
   // if ( !mfrc522.PICC_IsNewCardPresent()) {
