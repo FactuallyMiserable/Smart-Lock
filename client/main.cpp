@@ -14,8 +14,8 @@
 
 /*LCD Address and Pin Conf*/
 #define I2C_ADDR  0x27 // I2C address is 0x27 for the 16x2 display
-#define LCD_SDA 2
-#define LCD_SCL 4
+#define LCD_SDA 21
+#define LCD_SCL 22
 
 #define LCD_COLUMNS 16
 #define LCD_ROWS 2
@@ -35,11 +35,11 @@ void ClearLCD() {
 }
 
 /*MFRC522 Pin Conf*/
-#define SDA_PIN 5    // SDA connected to D5 (GPIO 5)
-#define RST_PIN 22   // RST connected to D22 (GPIO 22)
-#define SCK_PIN 18   // SCK connected to D18 (GPIO 18)
-#define MOSI_PIN 19  // MOSI connected to D19 (GPIO 19)
-#define MISO_PIN 23  // MISO connected to D23 (GPIO 23)
+#define SDA_PIN 5
+#define RST_PIN 17
+#define SCK_PIN 18
+#define MOSI_PIN 23
+#define MISO_PIN 19
 
 MFRC522 mfrc522(SDA_PIN, RST_PIN);  // Create MFRC522 instance
 
@@ -52,12 +52,20 @@ typedef struct struct_message {
 
 struct_message myData; // Create a global instance of the structure to hold the message
 
-void onDataReceived(const esp_now_recv_info* info, const uint8_t *incomingData, int len) {
-	struct_message incomingMessage;
-	memcpy(&incomingMessage, incomingData, sizeof(incomingMessage));
+volatile bool responseReceived = false;
+volatile bool accessGranted = false;
 
-	Serial.print("Received message: ");
-	Serial.println(incomingMessage.msg);
+void onDataReceived(const esp_now_recv_info* info, const uint8_t *incomingData, int len) {
+  char msg[6];
+  memcpy(msg, incomingData, len);
+  msg[len] = '\0';
+
+  if (strcmp(msg, "true") == 0) {
+    accessGranted = true;
+  } else {
+    accessGranted = false;
+  }
+  responseReceived = true;
 }
 
 #define ROW_NUM 4
@@ -75,12 +83,13 @@ const char keys[ROW_NUM][COL_NUM] = {
 // int keypresses_index = 0;
 
 /*Matching GPIO pins*/
-byte pin_rows[ROW_NUM] = {34, 35, 32, 33};
-byte pin_cols[COL_NUM] = {25, 26, 27};
+byte pin_rows[ROW_NUM] = {32, 33, 25, 4};
+byte pin_cols[COL_NUM] = {26, 27, 14};
 
 /*Create keypad object
 Example: char key = keypad.getKey();*/
 Keypad keypad = Keypad(makeKeymap(keys), pin_rows, pin_cols, ROW_NUM, COL_NUM);
+
 
 void setup() {
   /*Initialize the I2C bus*/
@@ -124,14 +133,14 @@ void setup() {
 	strcpy(myData.msg, "Hello from ESP32 Sender!");
 
 	/*Send message*/
-	esp_now_send(receiverMACAddress, (uint8_t *)&myData, sizeof(myData));
-  Serial.println("Message Sent.");
+	// esp_now_send(receiverMACAddress, (uint8_t *)&myData, sizeof(myData));
+  // Serial.println("Message Sent.");
 }
 
 void loop() {
     // Use LCD functions to Print to Rows 1 and 2
-    lcd.setCursor(0, 0);
     ClearLCD();
+    lcd.setCursor(0, 0);
     PrintToLCD(1, "Choose Mode:");
     PrintToLCD(2, "1. NFC 2. Keypad");
 
@@ -141,8 +150,8 @@ void loop() {
 
     if (key == '1') {
       // RFID Logic
-      lcd.setCursor(0, 0);
       ClearLCD();
+      lcd.setCursor(0, 0);
       PrintToLCD(1, "Choose mode:");
       PrintToLCD(2, "1. READ 2. ADD");
       while (true) {  
@@ -160,13 +169,13 @@ void loop() {
                   continue;
 
                 if (esp_now_send(receiverMACAddress, mfrc522.uid.uidByte, mfrc522.uid.size) == ESP_OK) {
-                  lcd.setCursor(0, 0);
                   ClearLCD();
+                  lcd.setCursor(0, 0);
                   PrintToLCD(1, "Sent!");
                   /*Wait for approval from server side*/
                 } else {
-                  lcd.setCursor(0, 0);
                   ClearLCD();
+                  lcd.setCursor(0, 0);
                   PrintToLCD(1, "Sent!");
                 }
 
@@ -177,6 +186,13 @@ void loop() {
               }
             } else if (key == '2') {
               // Write a logic that requires authentication by special passcode
+            } else if (key == '#') {
+              return; // Go back to main menu
+            } else {
+              ClearLCD();
+              lcd.setCursor(0, 0);
+              PrintToLCD(1, "Invalid Option");
+              delay(1000);
             }
 
             break;
@@ -185,33 +201,32 @@ void loop() {
 
 
     } else if (key == '2') {
-      lcd.setCursor(0, 0);
       ClearLCD();
+      lcd.setCursor(0, 0);
       PrintToLCD(1, "Enter Password:");
       PrintToLCD(2, "_ _ _ _");
       char stream[] = {'A', 'A', 'A', 'A', 'A'};
       int idx = 0;
-      while (idx < 5) {
+      while (true) {
         char key = keypad.getKey();
         delay(50); // Debounce
 
-        
         if (key == '*') {
           idx = 0;
           memset(stream, 'A', sizeof(stream));
-
-          lcd.setCursor(0, 1);
+          lcd.setCursor(0, 0);
           ClearLCD();
+          PrintToLCD(1, "Enter Password:");
           PrintToLCD(2, "_ _ _ _");
-
           continue;
         }
-        else if (key == '#' & idx == 4) {
-          break;
+        else if (key == '#') {
+          return; // Go back to main menu
         }
-        else if (key) {
+        else if (key && idx < 4) {
           stream[idx] = key;
           idx++;
+
           String pressed = "";
           for (int i = 0; i < 4; i++) {
             if (stream[i] == 'A') {
@@ -222,12 +237,16 @@ void loop() {
               pressed += " ";
             }
           }
+
           lcd.setCursor(0, 0);
           ClearLCD();
           PrintToLCD(1, "Enter Password:");
           PrintToLCD(2, pressed);
         }
 
+        if (idx == 4) {
+          break;
+        }
       }
 
       stream[4] = '\0';
@@ -236,8 +255,50 @@ void loop() {
       strcpy(myData.msg, stream);
 
       /*Send message*/
+      responseReceived = false;
+      accessGranted = false;
+
+      /* Send message */
       esp_now_send(receiverMACAddress, (uint8_t *)&myData, sizeof(myData));
       Serial.println("Message Sent.");
+
+      /* Wait for response or user abort (#) */
+      unsigned long startTime = millis();
+      lcd.setCursor(0, 0);
+      ClearLCD();
+      PrintToLCD(1, "Waiting for");
+      PrintToLCD(2, "response...");
+
+      while (!responseReceived) {
+        if (keypad.getKey() == '#') {
+          lcd.setCursor(0, 0);
+          ClearLCD();
+          PrintToLCD(1, "Aborted");
+          delay(1000);
+          return;
+        }
+
+        if (millis() - startTime > 10000) { // Optional timeout after 10s
+          lcd.setCursor(0, 0);
+          ClearLCD();
+          PrintToLCD(1, "Timeout");
+          delay(1000);
+          return;
+        }
+
+        delay(50);
+      }
+
+      /* Show result */
+      ClearLCD();
+      lcd.setCursor(0, 0);
+      
+      if (accessGranted) {
+        PrintToLCD(1, "Access Granted");
+      } else {
+        PrintToLCD(1, "Access Denied");
+      }
+      delay(2000);
     }
   
   // /* Look for new cards */
@@ -273,6 +334,6 @@ void loop() {
 	// }
 
 	// delay(2000); // Wait for 2 seconds before sending the next message
-  lcd.setCursor(0, 0);
   ClearLCD();
+  lcd.setCursor(0, 0);
 }
