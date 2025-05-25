@@ -83,7 +83,7 @@ const char keys[ROW_NUM][COL_NUM] = {
 // int keypresses_index = 0;
 
 /*Matching GPIO pins*/
-byte pin_rows[ROW_NUM] = {32, 33, 25, 4};
+byte pin_rows[ROW_NUM] = {32, 33, 25, 13};
 byte pin_cols[COL_NUM] = {26, 27, 14};
 
 /*Create keypad object

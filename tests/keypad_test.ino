@@ -2,7 +2,7 @@
 
 const byte ROWS = 4;
 const byte COLS = 3;
-byte rowPins[ROWS] = {32, 33, 25, 4};
+byte rowPins[ROWS] = {32, 33, 25, 13};
 byte colPins[COLS] = {26, 27, 14};
 char keys[ROWS][COLS] = {
   {'1', '2', '3'},
